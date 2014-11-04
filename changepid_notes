@@ -1,0 +1,38 @@
+Instructions: Volatility plugin changepid
+
+Assumptions: Windows host with VMWare workstation
+
+1. Create a virtual machine
+  a. make a note of the process name and target PIDs you want to manipulate
+  b. take a snapshot
+  c. shut the VM down (optional)
+  d. you can use suspended VMs as well, they're just harder to work with on repeated runs
+2. Download and unzip the Volatility 2.4 Windows Standalone Executable
+  a. http://www.volatilityfoundation.org/#!24/c12wa
+  b. In the directory  where you put volatility-2.4.standalone.exe, create a folder called plugins
+3. Alternatively, you can use the full version, in which case the plugins folder already exists
+4. Put the file changepid.py in the plugins folder (whether using the standalone or full version)
+5. Open an Administrator command prompt and navigate to the folder which has volatility-2.4.standalone.exe 
+  a. you'll get errors with a non-Administrator command prompt
+6. Find your host system disk's sector size with this command:
+  a. fsutil fsinfo ntfsinfo c:
+  b. the "Bytes Per Sector" value is the one you want, probably 512 or 4096.
+  c. If it's 512, you don't need to do anything more; if not, see step 7e
+7. From the command line, type the following on one line:
+  a. volatility-2.4.standalone.exe --plugins=.\plugins -f vm.vmem --profile=WinXPSP2x86 changepid --image_name=vmacthlp.exe --new_pid=800
+  b. where image_name is the name of the process to manipulate, and new_pid is the new pid to assign to this process
+  c. you can find the vmem file's profile with:
+    i. volatility-2.4.standalone.exe -f vm.vmem imageinfo
+    ii. the plugin should work for WinXP and Win7
+  d. the argument to -f is the vmem file to manipulate; this will likely be in another folder, so just provide the full path like this:
+    i. -f "D:\Jones\VMs\WinXP-HiddenPID\Windows XP Professional-Snapshot2.vmem"
+    ii. the quotes are important if your filename/path has any spaces in it
+    iii. the vmem file can be edited in place (in the VM folder); you don't have to make a copy or alter permissions, but the VM itself might have to be shut down (haven't tried this, but it might work with the VM running)
+  e. if your host disk's sector size is not 512, then add the following to the end of the command in step 7a:
+    i. --sector_size=4096
+    ii. where 4096 is whatever value you got in step 6
+8. The output of the command in 7a should look like this:
+  a. Changed PID of process named vmacthlp.exe from 856 to 800 at memfile offset 26683524.
+  b. which indicates that vmacthlp.exe should now have a PID of 800
+  c. you can manually check this with HxD; open the vmem file, set the display to dec (decimal), Ctrl-G (goto) the offset above (e.g., 26683524); you'll see the little endian representation of the PID starting at this location (4 bytes)
+9. Restore the VM snapshot associated with the vmem file just edited and the target process should have the new PID (viewed with tasklist or TaskManager for example)
